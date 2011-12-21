@@ -5,7 +5,8 @@
 # Date    : July 15 2010
 # Updated : July 15 2010
 # Author  : Alex Simenduev - (http://www.planetit.ws)
-# Summary : This is a nagios plugin that checks redis server state
+# Author  : Elan Ruusamäe <glen@delfi.ee>
+# Summary : This is a Nagios plugin that checks Redis server state
 #
 # ================================ Description =================================
 # The plugin is capable of check couple aspects of redis server. Supported
@@ -14,6 +15,10 @@
 # Legend:
 #               [*] Informational, [!] Bugix, [+] Added, [-] Removed
 #
+# Ver 2011.12.21
+#               [!] use Redis plugin, not mess with TCP directly, fixes lockup
+#                   when using redis 2.2.15 server (glen)
+#
 # Ver 2010.7.29:
 #               [*] Removed unuseful 'print' code
 #
@@ -21,13 +26,13 @@
 #               [*] Initial implementation.
 # ========================== START OF PROGRAM CODE =============================
 use strict;
-use IO::Socket;
 use Getopt::Long;
 use File::Basename;
+use Redis;
 
 # Variables Section
 # -------------------------------------------------------------------------- #
-my $VERSION       = "2010.7.15";
+my $VERSION       = "2011.12.21";
 my $SCRIPT_NAME   = basename(__FILE__);
 my $TIMEOUT       = 10;
 
@@ -49,64 +54,41 @@ my $o_crit	    = undef; # Critical level
 my $o_check	    = undef; # What to check (items, connections, memory)
 my $o_inverse   = undef; # Use inverse calculation of warning/critical thresholds
 my $o_version	= undef; # Script version
+my $info;
 
 # Entry point of the script
 # -------------------------------------------------------------------------- #
 check_arguments();	# First check for command line arguments
 
-# Connect to 'memcached' server
-my $SOCKET = IO::Socket::INET->new(
-    PeerAddr => $o_host,
-    PeerPort => $o_port,
-    Proto    => "tcp",
-    Type     => SOCK_STREAM,
-    Timeout  =>  $TIMEOUT
-);
-
-# Exit if connection failed
-if (!$SOCKET) {
-    print $STATES[$STATE_CRITICAL] . " - $@\n";
-    exit $STATE_CRITICAL;
-}
-
 my ($intState, $intData, $strOutput, $strPerfData);
 
-# Run memcached 'stats' command
-print $SOCKET "INFO\n";
+# Run 'info' command
+eval {
+	$info = get_info();
+};
+
+if ($@) {
+	# Exit if connection failed
+	print $STATES[$STATE_CRITICAL] . " - Could not connect: $!\n";
+	exit $STATE_CRITICAL;
+}
 
 # Get number of items
 if ($o_check =~ /^connections$/i) {
-    my $line = <$SOCKET>;
-    while ($line ne "\r\n") {
-        $intData = $1 if ($line =~ m/connected_clients:([0-9]+)/);  # Get number of connections
-        $line = <$SOCKET>;
-    }
-
+	$intData = $info->{connected_clients};
     $strOutput    = "$intData number of connections to the server";
     $strPerfData  = "'Connections'=" . $intData . ";;;;";
 }
 # Get memory usage
 elsif ($o_check =~ /^memory$/i) {
-    my ($line, $used_memory_human);
-
-    $line = <$SOCKET>;
-    while ($line ne "\r\n") {
-        $intData = $1 if ($line =~ m/used_memory:([0-9]+)/);                 # Get used bytes
-        $used_memory_human = $1 if ($line =~ m/used_memory_human:([\w.]+)/); # Get used in human readable format
-        $line = <$SOCKET>;
-    }
-
+	my $used_memory_human = $info->{used_memory_human}; # Get used in human readable format
+	$intData = $info->{used_memory}; # Get used bytes
     $strOutput    = "$used_memory_human memory in use by server";
     $strPerfData  = "'Used'=" . $intData . "B;;;; ";
 }
 # Get uptime
 elsif ($o_check =~ /^uptime$/i) {
-    my $line = <$SOCKET>;
-    while ($line ne "\r\n") {
-        $intData = $1 if ($line =~ m/uptime_in_days:([0-9]+)/);  # Get uptime seconds
-        $line = <$SOCKET>;
-    }
-
+	$intData = $info->{uptime_in_days};
     $strOutput    = "Up for $intData days";
     $strPerfData  = "'Uptime'=" . $intData . "d;;;;";
 }
@@ -135,9 +117,6 @@ else {
 
 # Now print the final output string
 print $STATES[$intState] . " - $strOutput|$strPerfData\n";
-
-# Close connection
-close($SOCKET);
 
 # Finally exit with current state error code.
 exit $intState;
@@ -187,6 +166,16 @@ sub check_arguments {
     # Set default values for some options if needed.
     $o_host = "localhost" unless defined($o_host);
     $o_port = "6379" unless defined($o_port);
+}
+
+sub get_info {
+    $o_host = "localhost" unless defined($o_host);
+    $o_port = "6379" unless defined($o_port);
+
+	my $redis_hp = $o_host . ":" . $o_port;
+	my $r = Redis->new( server => $redis_hp );
+	my $info_hash = $r->info;
+	return $info_hash;
 }
 
 sub print_usage {
