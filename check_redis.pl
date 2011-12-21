@@ -64,12 +64,14 @@ my ($intState, $intData, $strOutput, $strPerfData);
 
 # Run 'info' command
 eval {
+	no warnings 'redefine';
+	local *Carp::longmess = sub { shift(), "\n" };
 	$info = get_info();
 };
 
 if ($@) {
 	# Exit if connection failed
-	print $STATES[$STATE_CRITICAL] . " - Could not connect: $!\n";
+	print $STATES[$STATE_CRITICAL] . " - $@";
 	exit $STATE_CRITICAL;
 }
 
