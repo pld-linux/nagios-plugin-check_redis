@@ -186,7 +186,8 @@ sub print_usage {
 
 sub print_help {
 	print "\nRedis check plugin for Nagios, version ", $VERSION, "\n";
-	print "(C) 2010, Alex Simenduev - http://www.planetit.ws\n\n";
+	print "(C) 2010, Alex Simenduev - http://www.planetit.ws\n";
+	print "(C) 2011, Elan Ruusamäe <glen#delfi.ee>\n\n";
 	print_usage();
 	print <<EOD;
 -h, --help
