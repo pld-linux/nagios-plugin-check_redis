@@ -2,22 +2,18 @@
 %include	/usr/lib/rpm/macros.perl
 Summary:	Nagios Plugin for Redis checks
 Name:		nagios-plugin-%{plugin}
-Version:	0.1
+Version:	0.2
 Release:	1
 License:	GPL v2
 Group:		Networking
-# https://farmerluo.googlecode.com/files/check_redis.pl
-Source0:	%{plugin}.pl
+# https://nagios-plugins-shamil.googlecode.com/svn-history/r17/trunk/by_me/check_redis.pl
+Source0:	check_redis.pl
+# Source0-md5:	adf508ed3cd6579da6dc58b294188f7d
 Source1:	%{plugin}.cfg
-URL:		https://code.google.com/p/farmerluo/downloads/detail?name=check_redis.pl
 BuildRequires:	rpm-perlprov >= 4.1-13
 Requires:	nagios-common
-Requires:	nagios-plugins-libs
 BuildArch:	noarch
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
-
-# for perl plugins:
-%define		_noautoreq	perl(utils)
 
 %define		_sysconfdir	/etc/nagios/plugins
 %define		plugindir	%{_prefix}/lib/nagios/plugins
