@@ -6,9 +6,7 @@ Version:	0.2
 Release:	1
 License:	GPL v2
 Group:		Networking
-# https://nagios-plugins-shamil.googlecode.com/svn-history/r17/trunk/by_me/check_redis.pl
 Source0:	check_redis.pl
-# Source0-md5:	adf508ed3cd6579da6dc58b294188f7d
 Source1:	%{plugin}.cfg
 BuildRequires:	rpm-perlprov >= 4.1-13
 Requires:	nagios-common
