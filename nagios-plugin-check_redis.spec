@@ -1,5 +1,4 @@
 %define		plugin	check_redis
-%include	/usr/lib/rpm/macros.perl
 Summary:	Nagios Plugin for Redis checks
 Name:		nagios-plugin-%{plugin}
 Version:	0.2
